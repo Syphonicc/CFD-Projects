@@ -119,4 +119,4 @@ paraFoam
 ## References
 
 - [OpenFOAM Official Documentation](https://www.openfoam.com/documentation)
-- OpenFOAM v2512 Tutorial Cases — `$FOAM_TUTORIALS/incompressible/icoFoam/elbow`
+- OpenFOAM v2512 Tutorial Cases -> `$FOAM_TUTORIALS/incompressible/icoFoam/elbow`
