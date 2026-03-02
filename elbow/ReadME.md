@@ -48,6 +48,14 @@ After the bend, the velocity profile gradually re-develops toward a more uniform
 
 
 
+## Results
+
+| Velocity Magnitude | Pressure Field |
+|---|---|
+| ![Velocity](images/velocity_magnitude.png) | ![Pressure](images/pressure_field.png) |
+
+
+
 ## File Structure
 ```
 elbow/
