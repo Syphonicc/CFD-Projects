@@ -109,7 +109,7 @@ paraFoam
 ## Key Learnings
 
 - Configured and ran a complete OpenFOAM case from scratch on Linux, including mesh generation, solver execution, and post-processing
-- Understood the physical role of each boundary condition — no-slip walls, fixed velocity inlets, zero-gradient outlet
+- Understood the physical role of each boundary condition  no-slip walls, fixed velocity inlets, zero-gradient outlet 
 - Observed and interpreted inertia-driven flow asymmetry, outer-wall pressure buildup, and inner-corner separation at a pipe bend
 - Developed familiarity with OpenFOAM's case file structure (`0/`, `constant/`, `system/`) and the finite-volume workflow
 - Used ParaView to extract and interpret velocity and pressure fields from simulation output
