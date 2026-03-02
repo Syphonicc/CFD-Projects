@@ -1,6 +1,6 @@
 # Flow Through a Pipe Elbow — OpenFOAM Simulation
 
-A computational fluid dynamics simulation of incompressible viscous flow through a 90° pipe elbow with two inlets, solved using OpenFOAM v2512 on Fedora Linux. This case is based on the official OpenFOAM introductory tutorial and was used to develop familiarity with the full CFD workflow — meshing, solver configuration, execution, and post-processing in ParaView.
+A computational fluid dynamics simulation of incompressible viscous flow through a 90° pipe elbow with two inlets, solved using OpenFOAM v2512 on Fedora Linux. This case is based on the official OpenFOAM introductory tutorial and was used to develop familiarity with the full CFD workflow  meshing, solver configuration, execution, and post-processing in ParaView.
 
 
 
