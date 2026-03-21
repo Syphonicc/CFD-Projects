@@ -265,5 +265,5 @@ For cavityFine, cavityGrade, cavityHighRe, and cavityTurbulent -> follow the sam
 
 ---
 
-*Part of ongoing CFD learning — github.com/Syphonicc/CFD-Projects*
-*Next case: motorBike external aerodynamics using snappyHexMesh*
+*Part of ongoing CFD learning -> github.com/Syphonicc/CFD-Projects*
+
