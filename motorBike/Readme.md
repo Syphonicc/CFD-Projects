@@ -106,6 +106,10 @@ motorBike/
 ├── 100/ -> 500/                     <- solver output at each saved iteration
 └── postProcessing/                 <- force coefficients and other function objects
 ```
+## Results
+
+### Velocity Streamlines  
+![Velocity](results/Velocity_pic.png)
 
 ---
 
