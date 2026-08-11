@@ -1,317 +1,260 @@
-# NACA 0012 Airfoil: 2D CFD Validation (OpenFOAM)
+# NACA 0012: 2D RANS Validation against the NASA Turbulence Modeling Resource
 
-> **Status:** Iteration 2 complete. Validation against the NASA TMR benchmark at alpha = 10 deg, Re = 6 x 10^6, fully turbulent (Spalart-Allmaras). Additional angles of attack to follow.
-
----
-
-## Overview
-
-This repository documents an end-to-end 2D RANS validation study of the NACA 0012 airfoil against the **2DN00 NASA Turbulence Modeling Resource (TMR)** benchmark. The case targets essentially incompressible flow at Re = 6 x 10^6 and compares computed lift and drag coefficients against the canonical experimental and CFD reference datasets.
-
-The project went through two iterations:
-
-1. **Iteration 1 (initial attempt):** A custom-meshed case at alpha = 0 deg with a 13.5 chord farfield. The result was qualitatively reasonable but quantitatively biased by the close farfield and a small mesh tilt.
-2. **Iteration 2 (this README):** A rebuild from the ground up using NASA's own 897 x 257 structured C-grid (the same grid used by CFL3D, FUN3D, and the other TMR reference codes), at alpha = 10 deg with Re = 6 x 10^6. This is the proper validation setup.
-
-Reference: [NASA TMR, 2D NACA 0012 Airfoil Validation](https://tmbwg.github.io/turbmodels/naca0012_val.html)
+> **Status:** Validated. alpha = 10 deg, Re = 6 x 10^6, Spalart-Allmaras.
+> **C_L = 1.0835** against the CFL3D-SA reference of 1.0909 — **-0.68%**, inside the spread of the seven TMR reference codes.
 
 ---
 
-## Iteration 2: NASA TMR Grid Validation (alpha = 10 deg)
+## Result
 
-### Mesh
+| Case | C_L | error | C_D | error |
+|---|---|---|---|---|
+| NASA CFL3D-SA (reference) | 1.0909 | — | 0.01231 | — |
+| Iteration 2 (superseded) | 0.8036 | -26.3% | -0.01728 | — |
+| **Iteration 3 (validated)** | **1.0835** | **-0.68%** | **0.01023** | **-16.9%** |
 
-The NASA TMR provides a family of nested PLOT3D grids ranging from 113 x 33 (coarsest) to 1793 x 513 (finest). The **897 x 257** grid was used, which is the standard validation grid for all seven reference codes documented on the TMR results page.
+C_m,pitch about the quarter chord = 0.0059, correctly near zero for a symmetric section.
+
+![Convergence history](./figures/iteration3/fig1_convergence.png)
+
+![Validation comparison](./figures/iteration3/fig2_validation.png)
+
+The remaining C_D gap is discussed under [Drag](#the-drag-gap) below.
+
+---
+
+## Mesh
+
+NASA TMR **897 x 257** structured C-grid — the standard validation grid used by all seven reference codes on the TMR results page.
 
 | Parameter | Value |
 |---|---|
-| Source | NASA TMR `n0012_897-257.p2dfmt` (PLOT3D structured 2D) |
-| Topology | C-grid, wrapping from downstream lower farfield, around the airfoil, back to downstream upper farfield |
+| Source | `n0012_897-257.p2dfmt` (formatted 2D PLOT3D) |
+| Cells | 229,376 (100% hexahedra) |
 | Surface points on airfoil | 513 |
-| Farfield distance | ~500 chords (per TMR specification, minimises farfield BC influence) |
-| Total cells | 229,376 (100% hexahedra) |
-| Total faces | 918,464 |
-| Total points | 460,672 |
-| Minimum wall spacing | ~4 x 10^-7 chord (gives y+ < 1) |
-| Max non-orthogonality | 19.83 deg (avg 1.64 deg) |
+| Farfield distance | ~500 chords |
+| Max non-orthogonality | 19.83 deg (average 1.64) |
 | Max skewness | 0.20 |
-| Max aspect ratio | 3.18 x 10^7 (boundary layer cells, by design) |
+| **y+ on airfoil** | **min 0.005, max 0.298, average 0.117** |
 
-The high aspect ratio is intentional and reflects the proper wall-normal clustering needed for low-y+ RANS. `checkMesh` reports this as a warning, but it is the correct mesh topology for this Reynolds number.
+The measured y+ sits inside NASA's stated design range of 0.1–0.2 for this grid, confirming the mesh is correctly scaled. `checkMesh` flags the max aspect ratio (3.18 x 10^7) as a failed check — this is the wall-normal clustering required for y+ < 1 and is not an error.
 
-### PLOT3D to OpenFOAM Conversion
+![Full mesh](./figures/mesh/Full_mesh_view.png)
+*Full domain, farfield at ~500 chords.*
 
-OpenFOAM does not directly support the TMR's 2D PLOT3D format. A custom Python script (`plot3d_to_msh.py`) was written to:
+![Close-up](./figures/mesh/Close_up_mesh_view.png)
+*C-grid topology around the airfoil.*
 
-1. Read the formatted 2D PLOT3D file (897 x 257 = 230,529 raw nodes)
-2. Deduplicate the C-mesh wake-cut nodes (193 merged: 192 wake pairs plus the shared trailing edge point)
-3. Extrude to a single-cell-thick 3D slab (z_thickness = 0.1)
-4. Assign physical groups matching OpenFOAM patch names (`inlet`, `outlet`, `walls`, `frontAndBack`, `fluid`)
-5. Write a Gmsh `.msh` v2.2 file readable by `gmshToFoam`
+![Leading edge](./figures/mesh/Mesh_head_view.png)
+*Leading edge boundary-layer clustering.*
 
-After conversion via `gmshToFoam`, two patch types had to be edited in `constant/polyMesh/boundary`:
+![Trailing edge](./figures/mesh/tail-view_mesh.png)
+*Trailing edge, sharp TE preserved.*
 
-* `frontAndBack` changed from `patch` to `empty` (required for 2D simulations in OpenFOAM)
-* `walls` changed from `patch` to `wall` (required by wall-function BCs)
+### PLOT3D to OpenFOAM
 
-### Boundary Patches
+OpenFOAM has no converter for the TMR 2D PLOT3D format. `tools/plot3d_to_msh.py` handles it:
 
-| Patch | Type | Faces |
-|---|---|---|
-| inlet | freestreamVelocity / freestreamPressure | 896 |
-| outlet | freestreamVelocity / fixedValue | 512 |
-| walls (airfoil) | noSlip + nutUSpaldingWallFunction | 512 |
-| frontAndBack | empty (2D) | 458,752 |
+1. Reads the formatted 2D PLOT3D file (230,529 raw nodes)
+2. **Deduplicates the C-mesh wake-cut nodes** — 193 merged (192 wake pairs plus the shared trailing-edge point). Without this the wake cut becomes a wall instead of an internal interface.
+3. Extrudes to a single-cell-thick slab (z = 0.1)
+4. Assigns physical groups matching the OpenFOAM patch names
+5. Writes Gmsh `.msh` v2.2 for `gmshToFoam`
 
-### Flow Conditions
+`gmshToFoam` writes every patch as generic `patch`, so two types need correcting afterwards — `frontAndBack` to `empty`, `walls` to `wall`. Both are automated in `iteration3_validated/Allrun`.
+
+---
+
+## Case setup
 
 | Parameter | Value |
 |---|---|
 | Reynolds number | 6 x 10^6 |
-| Freestream velocity magnitude | 1.0 m/s (non-dimensionalised) |
-| Reference chord | 1.0 |
-| Kinematic viscosity (nu) | 1.6667 x 10^-7 m^2/s |
+| Freestream velocity | 1.0 (non-dimensional) |
+| Kinematic viscosity nu | 1.6666667 x 10^-7 |
 | Angle of attack | 10.0 deg |
-| Freestream U vector | (cos 10 deg, sin 10 deg, 0) = (0.98481, 0.17365, 0) |
-| Reference area (Aref) | 0.1 (chord x z_thickness) |
-| Lift direction | (-sin 10 deg, cos 10 deg, 0) |
-| Drag direction | (cos 10 deg, sin 10 deg, 0) |
-| Turbulence model | Spalart-Allmaras (RANS) |
-| Freestream nuTilda | 5 x 10^-7 (= 3 x nu, per TMR recommendation) |
-| Solver | `simpleFoam` (steady-state, incompressible) |
-| Initialisation | `potentialFoam` (gives a clean inviscid starting field) |
+| Freestream U | (0.98481, 0.17365, 0) |
+| Lift / drag direction | (-0.17365, 0.98481, 0) / (0.98481, 0.17365, 0) |
+| Reference area A_ref | 0.1 (chord x span) |
+| Moment reference | (0.25, 0, 0), quarter chord |
+| Turbulence model | Spalart-Allmaras |
+| Freestream nuTilda | 5 x 10^-7 (= 3 nu, per TMR) |
+| Freestream nu_t | 3.51 x 10^-8 (= nuTilda x f_v1) |
+| Solver | `simpleFoam`, SIMPLEC |
+| Initialisation | `potentialFoam` |
+| Converged at | 4266 iterations |
 
-### Workflow
+### Boundary conditions
+
+| Patch | U | p | nuTilda | nut | Faces |
+|---|---|---|---|---|---|
+| inlet | freestreamVelocity | freestreamPressure | freestream | calculated | 896 |
+| outlet | freestreamVelocity | freestreamPressure | freestream | calculated | 512 |
+| walls | noSlip | zeroGradient | fixedValue 0 | nutUSpaldingWallFunction | 512 |
+| frontAndBack | empty | empty | empty | empty | 458,752 |
+
+The `freestream*` family suits a C-grid in external aerodynamics: any farfield face can be inflow or outflow depending on local velocity direction, which varies around the C as incidence changes.
+
+### Numerics
 
 ```
-PLOT3D (.p2dfmt)         <-- NASA TMR grid
-       |
-       v
-plot3d_to_msh.py         <-- Python conversion script
-       |
-       v
-Gmsh .msh v2.2
-       |
-       v
-gmshToFoam               <-- OpenFOAM mesh converter
-       |
-       v
-constant/polyMesh        <-- Edit boundary types (empty, wall)
-       |
-       v
-potentialFoam            <-- Inviscid initialisation
-       |
-       v
-simpleFoam               <-- Steady-state RANS, SA model
-       |
-       v
-forceCoeffs              <-- Cl, Cd output
+div(phi,U)        bounded Gauss linearUpwind grad(U)
+div(phi,nuTilda)  bounded Gauss upwind
+laplacian         Gauss linear corrected
+wallDist          meshWave
+
+SIMPLE            consistent yes  (SIMPLEC)
+relaxation        p 1.0   U 0.9   nuTilda 0.7
+residualControl   1e-5 on p, U, nuTilda
 ```
 
-### Numerical Setup
+### Angle of attack
 
-After several rounds of stability tuning (see Key Learnings), the final solver settings are:
+The C-grid works at any incidence. Angle of attack is set by rotating the freestream vector, not the mesh:
 
-* `consistent SIMPLE` (SIMPLEC) for stability with the aggressive cell aspect ratios
-* `bounded Gauss linearUpwindV grad(U)` for momentum
-* `bounded Gauss upwind` for nuTilda (more dissipative but stable; the bounded scheme is essential here)
-* Relaxation factors: p = 0.3, U = 0.5, nuTilda = 0.3
-* Convergence tolerance: 1 x 10^-5 on all residuals
+```
+U_inf   = ( cos a,  sin a, 0)
+dragDir = ( cos a,  sin a, 0)
+liftDir = (-sin a,  cos a, 0)
+```
 
-### Run Duration
+One mesh, many angles.
 
-| Run | Iterations | Wall Time | Notes |
+---
+
+## The drag gap
+
+C_D = 0.01023 against 0.01231 is -16.9%, and is not claimed as validated. Three likely contributors:
+
+1. **Compressibility.** The TMR reference codes ran compressible at M = 0.15; `simpleFoam` is strictly incompressible.
+2. **Farfield vortex correction.** The CFL3D reference data uses a point-vortex farfield correction; none is applied here.
+3. **Discretisation.** `linearUpwind` momentum and `upwind` nuTilda are more dissipative than the reference schemes.
+
+For proportion: lift is a pressure integral dominated by the suction peak, which this mesh resolves well. Drag is a small difference between larger quantities — the seven reference codes agree to ~1% on C_L but disagree by ~4% among themselves on C_D.
+
+Pressure/viscous split at convergence:
+
+```
+             Total       Pressure    Viscous
+C_D:        0.010233    0.004033    0.006200
+C_L:        1.083529    1.083427    0.000102
+```
+
+Skin friction slightly exceeding pressure drag is the expected balance for an attached turbulent boundary layer at this Reynolds number.
+
+---
+
+## Iterations
+
+| | Mesh | alpha | Result |
 |---|---|---|---|
-| `potentialFoam` initialisation | ~10 (with non-orthogonal correctors) | ~95 s | Single core |
-| `simpleFoam` (initial 5000 step run) | 5000 | ~3370 s (56 min) | Single core, residuals converged for U and p, nuTilda still drifting |
-| `simpleFoam` (continuation) | 870 additional | ~580 s | Confirmed Cl and Cd were flat (converged but to a non-TMR value) |
+| **1** | Custom Gmsh C-mesh, 13.5c farfield | 0 deg | C_L ~ 0.019 (should be 0) — farfield too close |
+| **2** | NASA 897 x 257 | 10 deg | C_L = 0.804, C_D = -0.017 — incorrect setup |
+| **3** | NASA 897 x 257 | 10 deg | **C_L = 1.0835, C_D = 0.01023 — validated** |
+
+### What was wrong in Iteration 2
+
+`0/nut` was inherited from OpenFOAM's `airFoil2D` tutorial and never rescaled. The tutorial runs at nu = 1e-5; this case runs at nu = 1.6667e-7, so the same literal value of `0.14` meant a freestream eddy viscosity ratio of **8.4 x 10^5** instead of the correct **0.21**:
+
+```
+chi   = nuTilda_inf / nu = 5e-7 / 1.6667e-7 = 3.0
+f_v1  = chi^3 / (chi^3 + 7.1^3) = 0.0701
+nu_t  = 5e-7 x 0.0701 = 3.51e-8        ->  nu_t/nu = 0.21
+```
+
+The freestream should be effectively laminar — the boundary layer generates its own turbulence. Instead it was fed 840,000x molecular mixing, held there by the `freestream` BC, which flattened the suction peak and destroyed circulation. Negative C_D was the diagnostic signal: a 26% lift error can come from model or mesh inaccuracy, but net thrust means the momentum balance is broken.
+
+A second error compounded it: SIMPLEC was running with SIMPLE-appropriate relaxation (p = 0.3), which slowed convergence by roughly an order of magnitude.
+
+Correcting both moved C_L from -26.3% to -0.68% with no change to the turbulence model.
+
+**Correction to a previous version of this README:** the Iteration 2 gap was originally attributed to the ft2 trip term (OpenFOAM's `SpalartAllmaras` includes it; NASA's TMR reference uses SA-noft2), and described as not being a case setup error. That was wrong — it was entirely a case setup error. Noted here rather than quietly removed.
+
+`iteration2_nasa_grid/` is preserved as-run, including `nut = 0.14`, so the incorrect result is reproducible.
 
 ---
 
-## Results: alpha = 10 deg
-
-Converged values from `forceCoeffs1`:
-
-| Coefficient | Computed | TMR Reference (CFL3D-SA) | Delta |
-|---|---|---|---|
-| **CL** | 0.785 | 1.091 | -28.1% |
-| **CD** | -0.018 | 0.0123 | wrong sign |
-| **CmPitch** | 0.006 | ~0 | within noise |
-
-The pitching moment is correctly near zero (as expected for a symmetric airfoil about the quarter chord). The lift coefficient is positive and in the correct sign, but its magnitude is about 72% of the TMR reference value. The drag coefficient has the wrong sign, which is the more concerning discrepancy.
-
-### Diagnosis
-
-The pressure-vs-viscous split tells the story:
+## Repository structure
 
 ```
-Coefficient    Total       Pressure    Viscous
-Cd:           -0.01745    -0.02039    +0.00293
-Cl:           +0.78488    +0.78433    +0.00055
+airfoild2D/
+|-- tools/
+|   |-- plot3d_to_msh.py          PLOT3D -> Gmsh .msh converter
+|   `-- make_validation_plots.py  Figure generation
+|-- tmr_data/                     NASA TMR + experimental reference data
+|-- iteration1_custom_mesh/       alpha = 0 deg, own Gmsh mesh
+|-- iteration2_nasa_grid/         alpha = 10 deg, uncorrected nu_t
+|-- iteration3_validated/         alpha = 10 deg, corrected  <- the result
+|   `-- Allrun
+`-- figures/
 ```
 
-The viscous (skin friction) drag is small and positive as expected. The pressure drag is large and negative, which corresponds to excessive leading-edge suction not being recovered downstream. This is consistent with the Spalart-Allmaras nuTilda field showing `min: -0.00197 max: 1.45`, where the max value is one to two orders of magnitude larger than expected for this case. The model is producing numerically unstable turbulent viscosity peaks and clipping nuTilda to slightly negative values, which then feeds back into the boundary layer profile and the surface pressure distribution.
-
-OpenFOAM's `SpalartAllmaras` includes the ft2 trip term by default; NASA's SA-noft2 (used by CFL3D and FUN3D in the TMR validation) does not. The combination of this model difference and numerical instability on a high-aspect-ratio C-grid is the likely root cause of the gap. This is a documented limitation when comparing OpenFOAM RANS to NASA reference codes on this class of mesh, and is not a defect of the case setup itself.
-
-### Visualisations
-
-![Full mesh view](./figures/Full_mesh_view.png)
-*Figure 1: Full computational domain. Farfield extends ~500 chords from the airfoil in all directions, per NASA TMR specification.*
-
-![Close-up mesh](./figures/Close_up_mesh_view.png)
-*Figure 2: Close-up of the C-grid topology around the airfoil. The wake-cut on the downstream side is internally connected after node deduplication.*
-
-![Leading edge mesh](./figures/Mesh_head_view.png)
-*Figure 3: Leading edge mesh detail showing the boundary layer clustering. Minimum wall spacing is ~4 x 10^-7 chord (y+ < 1).*
-
-![Trailing edge mesh](./figures/tail-view_mesh.png)
-*Figure 4: Trailing edge close-up. The sharp TE is preserved (the modified NACA 0012 formula closes the airfoil exactly at x = 1).*
-
-![Pressure field](./figures/P_around_airfoil.png)
-*Figure 5: Pressure field around the airfoil at alpha = 10 deg. Stagnation region at the leading edge (high pressure) and suction zone on the upper surface (low pressure) are clearly resolved.*
-
-![Velocity field](./figures/U_around_airfoil.png)
-*Figure 6: Velocity magnitude field. The suction peak on the upper surface and the wake downstream are clearly visible. The flow is fully attached, consistent with NACA 0012 at alpha = 10 deg.*
-
-![Convergence history](./figures/convergence_history.png)
-*Figure 7: Convergence of Cl and Cd over 5000+ iterations. Cl converges cleanly to a stable value; Cd shows the negative steady-state value flagged in the diagnosis above.*
-
-![CL vs alpha comparison](./figures/cl_vs_alpha_comparison.png)
-*Figure 8: CL vs alpha. Our single data point at alpha = 10 deg compared against CFL3D-SA (NASA TMR reference), Ladson tripped experimental data, and Abbott and von Doenhoff. The CL underprediction is visible but the result is on the correct branch of the curve.*
+`constant/polyMesh/` is not committed for iterations 2 and 3 — it is ~100 MB and fully regenerable from the NASA grid via `tools/plot3d_to_msh.py`. Iteration 1's mesh is committed (2 MB, not regenerable without the original Gmsh script).
 
 ---
 
-## Iteration 1: Initial Custom Mesh (alpha = 0 deg)
-
-For historical context, the first iteration used a custom mesh with the farfield at only 13.5 chords, which is roughly 37 times closer than the TMR reference. This run revealed several issues:
-
-* A small geometric tilt (~1.15 deg) introduced asymmetry at intended zero AoA
-* The farfield proximity influenced the pressure field around the airfoil
-* The mesh resolution at the wall was insufficient for true Re = 6 x 10^6 turbulent boundary layer resolution
-
-The corrected Iteration 1 result at compensated alpha = 0 deg was CL ~= 0.019 (should be ~0 for a symmetric airfoil at zero AoA). The residual lift was attributable to the close farfield rather than the solver setup.
-
-These issues motivated the move to NASA's own validation grid for Iteration 2.
-
----
-
-## Key Learnings
-
-**Use the reference grid for a reference validation.**
-The single biggest improvement between Iteration 1 and Iteration 2 was simply using the same mesh that the reference codes use. A validation case is not about your mesh, it is about isolating the solver and turbulence model behaviour. Building your own mesh and then comparing to NASA's grid-resolved reference values is a recipe for confounded results.
-
-**PLOT3D to OpenFOAM is not a one-liner.**
-There is no built-in converter from the TMR 2D PLOT3D format to OpenFOAM polyMesh. The wake-cut node merging is the critical step: a naive read of the PLOT3D file gives 230,529 nodes, but 193 of those are duplicated across the C-mesh wake cut and must be merged so the wake becomes an internal mesh interface rather than a wall. The `plot3d_to_msh.py` script in this repository handles this.
-
-**gmshToFoam does not finish the job.**
-After `gmshToFoam` runs, two patch types must be hand-edited in `constant/polyMesh/boundary`: `frontAndBack` to `empty` (for 2D), and `walls` to `wall` (for wall-function BCs). This is not automated, and the solver fails with cryptic errors if it is missed.
-
-**Tutorial solver settings are not universal.**
-Copying `system/fvSchemes` and `system/fvSolution` from the OpenFOAM `airFoil2D` tutorial gave wildly oscillating force coefficients in early iterations (peaks of +200 and -400 within 60 iterations). The tutorial mesh has much lower aspect ratios than the NASA grid. The fix was lower relaxation factors (p = 0.3, U = 0.5, nuTilda = 0.3), bounded upwind for nuTilda, and `consistent` SIMPLE.
-
-**potentialFoam initialisation is worth the 90 seconds.**
-A uniform initial U field at Re = 6 x 10^6 produces a violent startup transient that takes thousands of iterations to damp. Running `potentialFoam` first (inviscid potential flow) gives `simpleFoam` a clean starting field and dramatically improves convergence behaviour. This requires adding a `Phi` solver entry and a `potentialFlow` block to `fvSolution`, plus an extra `div(div(phi,U))` scheme in `fvSchemes`.
-
-**The forceCoeffs lift and drag directions must be in the wind frame.**
-For an AoA sweep, the correct way to handle different angles is to rotate the freestream velocity vector (and the `liftDir` / `dragDir` in `forceCoeffs`) rather than rotating the mesh. For alpha:
-
-```
-U_inf      = (cos alpha,  sin alpha,  0)
-dragDir    = (cos alpha,  sin alpha,  0)
-liftDir    = (-sin alpha, cos alpha,  0)
-```
-
-One mesh, many angles of attack.
-
-**Aspect ratio warnings are not errors.**
-`checkMesh` reports a max aspect ratio of 3.18 x 10^7 on the NASA grid, with 29,164 cells flagged as "high aspect ratio". This is by design for a y+ < 1 turbulent boundary layer mesh and is not a problem for the solver, although it does require conservative numerics. CFL3D handles this same grid without trouble.
-
-**OpenFOAM SA is not bit-for-bit NASA SA.**
-After all the case setup is correct, there remains a 28% gap in Cl and a sign mismatch in Cd against the TMR CFL3D-SA reference. The OpenFOAM `SpalartAllmaras` model includes the ft2 trip term by default, whereas NASA's TMR reference uses SA-noft2. Combined with numerical instability of nuTilda on the high-AR C-grid, this produces a real implementation gap. This is a known and documented difference, not a defect of the workflow.
-
-**Always look at the flow field, not just the numbers.**
-The forceCoeffs values alone (Cl positive but low, Cd wrong sign) could mean many things. Visualising the pressure and velocity fields in ParaView confirmed that the flow physics was qualitatively correct (stagnation at LE, suction peak on upper surface, attached flow, wake downwash). This narrowed the diagnosis from "case is broken" to "turbulence model is misbehaving".
-
----
-
-## Repository Structure
-
-```
-.
-|-- 0/                       Initial fields (U, p, nuTilda, nut)
-|-- constant/
-|   |-- polyMesh/            Converted from NASA TMR PLOT3D grid
-|   |-- transportProperties  Newtonian, nu = 1.6667e-7
-|   `-- turbulenceProperties RAS, SpalartAllmaras
-|-- system/
-|   |-- controlDict          simpleFoam settings, forceCoeffs function object
-|   |-- fvSchemes            steadyState, bounded upwind for nuTilda
-|   `-- fvSolution           GAMG for p and Phi, smoothSolver for U and nuTilda
-|-- tmr_data/                Downloaded NASA TMR reference data files
-|-- figures/                 ParaView snapshots and matplotlib plots
-|-- plot3d_to_msh.py         PLOT3D to Gmsh .msh conversion script
-|-- make_comparison_plot.py  CL vs alpha plot script
-`-- README.md
-```
-
----
-
-## Reproducing This Case
+## Reproducing
 
 ```bash
-# 1. Download the NASA TMR grids
+# 1. Get the NASA TMR grids
+#    https://tmbwg.github.io/turbmodels/naca0012_grids.html
 wget https://www.nasa.gov/wp-content/uploads/2026/02/naca0012-grids.zip
 unzip naca0012-grids.zip
 gunzip n0012_897-257.p2dfmt.gz
+cp n0012_897-257.p2dfmt airfoild2D/
 
-# 2. Convert PLOT3D to Gmsh .msh
-python3 plot3d_to_msh.py n0012_897-257.p2dfmt n0012_TMR.msh
-
-# 3. Convert to OpenFOAM polyMesh
+# 2. Run the validated case
+cd airfoild2D/iteration3_validated
 source /usr/lib/openfoam/openfoam2512/etc/bashrc
-gmshToFoam n0012_TMR.msh
+./Allrun
 
-# 4. Fix patch types (frontAndBack -> empty, walls -> wall)
-#    Edit constant/polyMesh/boundary by hand or with sed.
-
-# 5. Verify
-checkMesh
-
-# 6. Initialise the flow
-potentialFoam -writep
-
-# 7. Run the solver
-simpleFoam
-
-# 8. Generate the comparison plot
-python3 make_comparison_plot.py
+# 3. Generate the figures
+cd ..
+python3 tools/make_validation_plots.py
 ```
+
+~70 minutes single-core (95 s `potentialFoam`, ~65 min for 4266 `simpleFoam` iterations). `decomposePar` plus `mpirun -np 4` cuts this by about 3.5x.
+
+`checkMesh` should report 229,376 hexahedra, max non-orthogonality ~19.8 deg, max skewness ~0.20, and one failed check for high aspect ratio (expected).
 
 ---
 
-## Future Work
+## Key learnings
 
-* Run the full alpha sweep (0, 5, 8, 10, 12, 14, 15 deg) for the CL vs alpha and CD vs CL plots required by the TMR validation
-* Repeat with the k-omega SST model for cross-comparison against the TMR SST reference values (this should partially close the model implementation gap)
-* Extract surface Cp and Cf distributions at alpha = 0, 10, 15 deg for direct comparison against the TMR Ladson and Gregory experimental data
-* Investigate the OpenFOAM SA-noft2 variant (or coefficient tweaks to disable ft2) for closer match to NASA's SA implementation
-* Try the finer 1793 x 513 NASA grid for a grid convergence study
+**Check the ratio, not the value, on anything inherited.** A dimensional constant copied from a working case is only meaningful alongside the scales it was derived for. `0.14` is not wrong in the abstract — it is wrong against a viscosity two orders of magnitude smaller.
+
+**Unphysical and inaccurate are different failures.** C_L 26% low invites investigation of models and meshes. C_D *negative* means something is structurally broken. Which class you have determines where to look.
+
+**A plausible, citable explanation is not thereby the correct one.** The ft2 hypothesis had the particular danger of being an answer that required no further work.
+
+**Match relaxation factors to the algorithm.** SIMPLEC with p = 0.3 is mismatched, not conservative — the consistent formulation already handles the pressure-velocity coupling.
+
+**Independent checks are cheap.** The y+ measurement confirmed correct mesh scaling in thirty seconds and eliminated a whole class of hypotheses. `checkMesh` reporting `Number of regions: 1` killed a wake-cut hypothesis just as fast.
+
+**Use the reference grid for a reference validation.** Building your own mesh and comparing against grid-resolved reference values confounds mesh error with model error. Iteration 1 demonstrates this.
+
+---
+
+## Future work
+
+* **alpha = 0 deg** — highest-value next case: a symmetric airfoil at zero incidence must give C_L = 0 exactly, so any setup asymmetry shows up immediately.
+* Full alpha sweep (0, 5, 8, 10, 12, 14, 15 deg) for the C_L-alpha and C_D-C_L curves.
+* Surface C_p and C_f distributions against the TMR data — a stronger validation than integrated forces, showing the physics is right along the whole chord.
+* k-omega SST for cross-comparison against the TMR SST reference values.
+* Grid convergence study on the 1793 x 513 grid.
 
 ---
 
 ## References
 
 * NASA Turbulence Modeling Resource, [2DN00 NACA 0012 Validation Case](https://tmbwg.github.io/turbmodels/naca0012_val.html)
-* NASA TMR, [Grids for NACA 0012 Airfoil Case](https://tmbwg.github.io/turbmodels/naca0012_grids.html)
+* NASA TMR, [Grids for the NACA 0012 Airfoil Case](https://tmbwg.github.io/turbmodels/naca0012_grids.html)
 * NASA TMR, [SA Model Results for NACA 0012](https://tmbwg.github.io/turbmodels/naca0012_val_sa.html)
-* Ladson, C. L., *Effects of Independent Variation of Mach and Reynolds Numbers on the Low-Speed Aerodynamic Characteristics of the NACA 0012 Airfoil Section*, NASA TM 4074, 1988
-* Gregory, N. and O'Reilly, C. L., *Low-Speed Aerodynamic Characteristics of NACA 0012 Aerofoil Section*, R and M 3726, 1970
-* Abbott, I. H. and von Doenhoff, A. E., *Theory of Wing Sections*, Dover Publications, 1959
-* Thomas, P. D. and Salas, M. D., *Far-Field Boundary Conditions for Transonic Lifting Solutions*, AIAA Journal 24(7), 1986. https://doi.org/10.2514/3.9394
-* McCroskey, W. J., *A Critical Assessment of Wind Tunnel Results for the NACA 0012 Airfoil*, NASA TM 100019, 1987
 * Spalart, P. R. and Allmaras, S. R., *A One-Equation Turbulence Model for Aerodynamic Flows*, AIAA Paper 92-0439, 1992
+* Ladson, C. L., *Effects of Independent Variation of Mach and Reynolds Numbers on the Low-Speed Aerodynamic Characteristics of the NACA 0012 Airfoil Section*, NASA TM 4074, 1988
+* Abbott, I. H. and von Doenhoff, A. E., *Theory of Wing Sections*, Dover, 1959
+* McCroskey, W. J., *A Critical Assessment of Wind Tunnel Results for the NACA 0012 Airfoil*, NASA TM 100019, 1987
 
 ---
 
-*Simulations performed in OpenFOAM v2512 on Fedora Linux. Visualisation in ParaView. Plotting via gnuplot and matplotlib.*
+*OpenFOAM v2512 on Fedora Linux. Visualisation in ParaView. Plotting in matplotlib.*

@@ -1,0 +1,38 @@
+#!/bin/bash
+# NACA 0012 TMR validation, alpha = 10 deg, Re = 6e6
+# Requires: NASA grid n0012_897-257.p2dfmt (see README for download)
+
+cd "${0%/*}" || exit 1
+. "$WM_PROJECT_DIR/bin/tools/RunFunctions"
+
+GRID=../n0012_897-257.p2dfmt
+MSH=n0012_TMR.msh
+
+if [ ! -f "$GRID" ]; then
+    echo "ERROR: NASA grid not found at $GRID"
+    echo "Download from https://tmbwg.github.io/turbmodels/naca0012_grids.html"
+    exit 1
+fi
+
+# 1. PLOT3D -> Gmsh
+python3 ../tools/plot3d_to_msh.py "$GRID" "$MSH"
+
+# 2. Gmsh -> OpenFOAM polyMesh
+runApplication gmshToFoam "$MSH"
+
+# 3. Fix patch types (gmshToFoam writes everything as generic 'patch')
+sed -i '/^    frontAndBack$/,/}/ s/type            patch/type            empty/'        constant/polyMesh/boundary
+sed -i '/^    frontAndBack$/,/}/ s/physicalType    patch/physicalType    empty/'        constant/polyMesh/boundary
+sed -i '/^    walls$/,/}/        s/type            patch/type            wall/'         constant/polyMesh/boundary
+sed -i '/^    walls$/,/}/        s/physicalType    patch/physicalType    wall/'         constant/polyMesh/boundary
+
+# 4. Verify mesh
+runApplication checkMesh
+
+# 5. Inviscid initialisation
+runApplication potentialFoam -writep
+
+# 6. Steady-state RANS
+runApplication simpleFoam
+
+echo "Done. Force coefficients in postProcessing/forceCoeffs1/"
