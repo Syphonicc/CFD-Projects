@@ -98,36 +98,37 @@ Both the unscaled (`n2a_feet.stl`) and scaled (`n2a_wt.stl`) surfaces are commit
 
 ## Flow conditions
 
+Freestream state reconstructed from M and Re, per instruction from Othrys:
+**match Re and M, do not chase density or viscosity.**
+
+The reference reports only M and Re, not the raw freestream state. This is
+normal for an open-circuit tunnel such as the Langley 14x22, where ambient
+density and viscosity drift day-to-day with conditions, so M and Re are the
+invariants and the dimensional state is reconstructed rather than quoted.
+
+Fixing T = 288.15 K sets both the speed of sound and the Sutherland
+viscosity; density then follows from the target Reynolds number:
+
 | Parameter | Value |
 |---|---|
 | Mach number | 0.20 |
-| Target Reynolds number (L_ref) | 6.60 × 10⁶ |
+| Reynolds number (L_ref) | 6.60 x 10^6 |
 | Reference length L_ref | 1.5382 m |
+| Freestream velocity U | 68.05 m/s |
+| Freestream temperature T | 288.15 K |
+| Freestream pressure p | 93,290 Pa |
+| Freestream density rho | 1.1281 kg/m3 |
+| Dynamic viscosity mu | 1.7893 x 10^-5 Pa.s |
 | Solver | `rhoSimpleFoam` (compressible, steady) |
-| Turbulence models | Spalart–Allmaras, k-ω SST |
-| Near-wall treatment | wall-resolved, y⁺ < 1 |
-| Configuration | cruise: wing–body, no nacelles, no landing gear, no LE droop, controls undeflected |
+| Turbulence models | Spalart-Allmaras, k-omega SST |
+| Near-wall treatment | wall-resolved, y+ < 1 |
+| Configuration | cruise: wing-body, no nacelles, no landing gear, no LE droop, controls undeflected |
 
-### Open question — freestream state *(pending confirmation)*
+Note the resulting pressure is below atmospheric. This is a consequence of
+reconstructing from Re at fixed T and M, not a claim about the tunnel's
+actual operating state.
 
-At 5.8% scale, standard sea-level air does **not** give Re = 6.6 × 10⁶:
 
-```
-T   = 288.15 K
-a   = √(γRT) = 340.3 m/s
-U   = 0.2 × 340.3 = 68.05 m/s
-μ   = 1.7893e-5 Pa·s        (Sutherland at 288.15 K)
-Re  = 1.225 × 68.05 × 1.5382 / 1.7893e-5 = 7.17e6
-```
-
-That is 8.6% above target. Matching Re = 6.6 × 10⁶ at M = 0.2 and T = 288.15 K requires reduced density:
-
-```
-ρ = Re·μ / (U·L_ref) = 6.6e6 × 1.7893e-5 / (68.05 × 1.5382) = 1.128 kg/m³
-p = ρRT = 1.128 × 287 × 288.15 ≈ 93.3 kPa
-```
-
-The Langley 14×22 is an atmospheric tunnel, so this discrepancy suggests the reference's stated Re may rest on a different reference length, tunnel temperature, or test velocity. **Resolve before the case files are written** — an unverified inherited freestream value is the same class of error that invalidated Case 1.
 
 ### Fluid properties
 
@@ -238,7 +239,7 @@ Mesh generation local. Solve compute to be determined once mesh size is known.
 | 2026-08-13 | Full-scale verification against reference dimensions | done |
 | 2026-08-13 | Tagged multi-solid STL export | done |
 | 2026-08-13 | Scaled to 5.8% wind tunnel model, watertight verified | done |
-| — | Freestream state resolved (see open question above) | pending |
+| 2026-08-13 | Freestream state resolved (match Re and M) | done |
 | — | Reference value extraction from paper | pending |
 | — | Domain sizing and background mesh | pending |
 | — | `snappyHexMesh` generation | pending |
