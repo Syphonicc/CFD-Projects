@@ -1,0 +1,93 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| N2A Hybrid Wing-Body - background mesh                                       |
+|                                                                              |
+| Model (5.8% WT scale):  x 0 .. 2.6235 m,  y -1.883 .. 1.883,  z -0.22 .. 0.38 |
+| Half model: symmetry plane at y = 0, mesh spans y = 0 .. +131                 |
+|                                                                              |
+| Farfield at 50 body lengths (50 x 2.6235 = 131.2 m), matching                 |
+| Aprovitola et al. (2022).                                                     |
+|                                                                              |
+| Background cell size 4 m uniform.                                             |
+|   level  7 ->  31.2 mm    (pilot)                                             |
+|   level  9 ->   7.8 mm    (~4 M cells, laptop target)                         |
+|   level 10 ->   3.9 mm    (~15-30 M cells, HPC target)                        |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+scale   1;
+
+// Domain bounds
+xMin    -131;
+xMax     134;
+yMin       0;      // symmetry plane
+yMax     131;
+zMin    -131;
+zMax     131;
+
+// 4 m nominal cells
+nx        66;      // 265 / 66 = 4.02 m
+ny        33;      // 131 / 33 = 3.97 m
+nz        66;      // 262 / 66 = 3.97 m
+
+vertices
+(
+    ($xMin $yMin $zMin)   // 0
+    ($xMax $yMin $zMin)   // 1
+    ($xMax $yMax $zMin)   // 2
+    ($xMin $yMax $zMin)   // 3
+    ($xMin $yMin $zMax)   // 4
+    ($xMax $yMin $zMax)   // 5
+    ($xMax $yMax $zMax)   // 6
+    ($xMin $yMax $zMax)   // 7
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) ($nx $ny $nz) simpleGrading (1 1 1)
+);
+
+edges ();
+
+boundary
+(
+    inlet
+    {
+        type patch;
+        faces ( (0 4 7 3) );          // x = xMin
+    }
+
+    outlet
+    {
+        type patch;
+        faces ( (1 2 6 5) );          // x = xMax
+    }
+
+    symmetry
+    {
+        type symmetryPlane;
+        faces ( (0 1 5 4) );          // y = 0
+    }
+
+    farfield
+    {
+        type patch;
+        faces
+        (
+            (3 7 6 2)                 // y = yMax
+            (0 3 2 1)                 // z = zMin
+            (4 5 6 7)                 // z = zMax
+        );
+    }
+);
+
+mergePatchPairs ();
+
+// ************************************************************************* //

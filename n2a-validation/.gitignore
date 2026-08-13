@@ -34,3 +34,15 @@ geometry/*_raw.stl
 *.bak
 __pycache__/
 *.pyc
+
+# Generated mesh (regenerable from dictionaries)
+**/constant/polyMesh/
+**/constant/extendedFeatureEdgeMesh/
+**/constant/triSurface/*.eMesh
+**/constant/triSurface/*.stl
+
+# Generated mesh (regenerable from dictionaries)
+**/constant/polyMesh/
+**/constant/extendedFeatureEdgeMesh/
+**/constant/triSurface/*.eMesh
+**/constant/triSurface/*.stl

@@ -1,0 +1,37 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| Extract feature edges from the N2A surface for snappyHexMesh feature snapping |
+|                                                                              |
+| includedAngle 150 captures the leading edge, trailing edge and the            |
+| wing/tail junctions without picking up noise from the 34-section tessellation.|
+| If the LE comes out faceted, lower it; if too many spurious edges appear on   |
+| smooth surfaces, raise it.                                                    |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      surfaceFeatureExtractDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+n2a_wt.stl
+{
+    extractionMethod    extractFromSurface;
+
+    extractFromSurfaceCoeffs
+    {
+        includedAngle   150;
+    }
+
+    subsetFeatures
+    {
+        nonManifoldEdges    no;
+        openEdges           yes;
+    }
+
+    writeObj            yes;
+}
+
+// ************************************************************************* //
