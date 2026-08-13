@@ -1,0 +1,36 @@
+# OpenFOAM time directories
+[0-9]*/
+!0/
+0.orig/
+
+# Mesh (regenerable, large)
+constant/polyMesh/
+constant/extendedFeatureEdgeMesh/
+constant/triSurface/*.eMesh
+
+# Parallel decomposition
+processor*/
+
+# Logs
+log.*
+*.log
+
+# Post-processing output
+postProcessing/*/*/*.vtk
+VTK/
+
+# ParaView
+*.foam
+*.OpenFOAM
+
+# Large geometry intermediates
+*.stl.gz
+geometry/*_raw.stl
+
+# OS / editor
+.DS_Store
+*~
+*.swp
+*.bak
+__pycache__/
+*.pyc
