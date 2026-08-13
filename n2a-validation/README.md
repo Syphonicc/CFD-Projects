@@ -1,27 +1,27 @@
 # N2A Hybrid Wing–Body — Compressible RANS Study
 
-**Status: in progress.** This README is written before results exist and is updated as work proceeds. Sections marked *pending* have not been done yet.
+**Status: in progress.** Written before results exist, updated as work proceeds. Sections marked *pending* have not been done yet.
 
 ---
 
 ## Objective
 
-Steady compressible RANS of the NASA N2A hybrid wing–body at low speed, using `rhoSimpleFoam` in OpenFOAM, at two angles of attack with two turbulence models.
+Steady compressible RANS of the NASA N2A hybrid wing–body at low speed using `rhoSimpleFoam`, at two angles of attack with two turbulence models.
 
-The deliverable is the **comparison**, not the coefficients on their own. Two axes:
+The deliverable is the **comparison**, not the coefficients alone. Two axes:
 
-1. **Compressible vs incompressible treatment.** M∞ = 0.2 is often treated as effectively incompressible, but local acceleration over the upper surface can push past that. Whether it does — and where — is part of what this study reports.
-2. **Spalart–Allmaras vs k-ω SST** at identical conditions. Where they agree, where they diverge, and why.
+1. **Compressible vs incompressible treatment.** M∞ = 0.2 is often treated as effectively incompressible, but local acceleration over the upper surface can push past that. Whether it does, and where, is part of what this study reports.
+2. **Spalart–Allmaras vs k-ω SST** at identical conditions — where they agree, where they diverge, and why.
 
-**Reference:** Aprovitola, A.; Aurisicchio, F.; Di Nuzzo, P.E.; Pezzella, G.; Viviani, A. *Low Speed Aerodynamic Analysis of the N2A Hybrid Wing–Body.* Aerospace 2022, 9(2), 89. [doi:10.3390/aerospace9020089](https://doi.org/10.3390/aerospace9020089) (open access)
+**Primary reference:** Aprovitola, A.; Aurisicchio, F.; Di Nuzzo, P.E.; Pezzella, G.; Viviani, A. *Low Speed Aerodynamic Analysis of the N2A Hybrid Wing–Body.* Aerospace 2022, 9(2), 89. [doi:10.3390/aerospace9020089](https://doi.org/10.3390/aerospace9020089)
 
-Secondary: Almosnino, D. *A Low Subsonic Study of the NASA N2A Hybrid Wing-Body Using an Inviscid Euler-Adjoint Solver*, AIAA 2016-3267.
+**Secondary:** Almosnino, D. *A Low Subsonic Study of the NASA N2A Hybrid Wing-Body Using an Inviscid Euler-Adjoint Solver*, AIAA 2016-3267.
+
+Comparison data are taken from Aprovitola et al.
 
 ---
 
 ## Run matrix
-
-Four runs.
 
 | Run | α | Turbulence model | Status |
 |---|---|---|---|
@@ -30,7 +30,69 @@ Four runs.
 | 3 | 10° | Spalart–Allmaras | pending |
 | 4 | 10° | k-ω SST | pending |
 
-**Why these angles.** The reference reports attached flow up to about 10°, with a leading-edge vortex emanating from the inboard wing and rolling up at around α = 10°, and linear C_L from −5° to 13°. So 6° sits in clean attached flow where the two models should broadly agree, and 10° sits at vortex onset where they are expected to diverge. The divergence is the interesting result.
+All four on a common mesh, so any difference between runs is attributable to the model or the angle, not to discretisation.
+
+**Why these angles.** The reference reports attached flow to about 10°, with a leading-edge vortex emanating from the inboard wing and rolling up at around α = 10°, and linear C_L from −5° to 13°. So 6° is clean attached flow where the two models should broadly agree; 10° is at vortex onset where they are expected to diverge.
+
+---
+
+## Scale — resolved
+
+The reference runs two Reynolds numbers: **6.60 × 10⁶** for the Langley 14×22 wind tunnel campaign, and **1.27 × 10⁸** for free flight. This study targets the wind tunnel condition, so the geometry is the **5.8% scale tunnel model**, not the full-scale aircraft.
+
+### Conversion chain
+
+The OpenVSP model is dimensioned in **feet** at **full scale**. Two factors apply:
+
+```
+feet → metres        0.3048
+full scale → 5.8%    0.058
+combined             0.0176784
+```
+
+### Verification
+
+Full-scale check, read from the OpenVSP Plan tab before scaling:
+
+| Quantity | Model (ft) | × 0.3048 (m) | Paper | Agreement |
+|---|---|---|---|---|
+| Projected span | 212.99992 | 64.922 | 64.92 | exact |
+| MAC | 86.94289 | 26.500 | 26.52 (L_ref) | 0.08% |
+| Curved area | 9992.70833 | 928.39 | 925.2 (S_ref) | 0.34% |
+
+Note it is the **projected** span that matches, not the total span of 213.24 ft; the difference is dihedral.
+
+Wind-tunnel scale check, from `surfaceCheck` on the exported STL:
+
+| Quantity | Target | Measured | Status |
+|---|---|---|---|
+| Span (y-extent) | 3.7655 m | 3.7655 m | ✅ exact |
+| Body length (x-extent) | 2.616 m | 2.6235 m | ✅ 0.28% |
+| Centreline | y = 0 | −1.88275 to +1.88275 | ✅ symmetric |
+| Watertight | closed | closed, all edges connected to two faces | ✅ |
+| Parts | 3 | 3 (Wing_Body + 2 vertical tails) | ✅ |
+
+### Reference dimensions at wind-tunnel scale
+
+| Quantity | Full scale | × 0.058 |
+|---|---|---|
+| Span | 64.92 m | 3.766 m |
+| Body length | 45.10 m | 2.616 m |
+| Reference length L_ref | 26.52 m | 1.538 m |
+| Reference area S_ref | 925.2 m² | 3.112 m² |
+| Moment reference centre | 24.33 m aft of nose | 1.411 m |
+
+S_ref scales by 0.058², not 0.058.
+
+### Why scaling was done on the STL, not in OpenVSP
+
+OpenVSP has no units setting — the developers state the tool is unit-agnostic and that scaling is the mechanism for unit conversion. Per-component scaling is documented to leave positional offsets unscaled, which would silently displace the vertical tails relative to the body. `surfaceTransformPoints` applies a single uniform factor to every vertex of the triangulated surface, with no parametric relationships to go wrong:
+
+```bash
+surfaceTransformPoints -scale '(0.0176784 0.0176784 0.0176784)' n2a_feet.stl n2a_wt.stl
+```
+
+Both the unscaled (`n2a_feet.stl`) and scaled (`n2a_wt.stl`) surfaces are committed so the conversion is auditable.
 
 ---
 
@@ -39,50 +101,35 @@ Four runs.
 | Parameter | Value |
 |---|---|
 | Mach number | 0.20 |
-| Reynolds number (L_ref) | 6.60 × 10⁶ |
+| Target Reynolds number (L_ref) | 6.60 × 10⁶ |
+| Reference length L_ref | 1.5382 m |
 | Solver | `rhoSimpleFoam` (compressible, steady) |
-| Turbulence models | Spalart–Allmaras and k-ω SST |
-| Near-wall treatment | **Wall-resolved, y⁺ < 1** |
-| Configuration | Cruise: wing–body, no nacelles, no landing gear, no LE droop, control surfaces undeflected |
+| Turbulence models | Spalart–Allmaras, k-ω SST |
+| Near-wall treatment | wall-resolved, y⁺ < 1 |
+| Configuration | cruise: wing–body, no nacelles, no landing gear, no LE droop, controls undeflected |
 
----
+### Open question — freestream state *(pending confirmation)*
 
-## Geometry
+At 5.8% scale, standard sea-level air does **not** give Re = 6.6 × 10⁶:
 
-Source: OpenVSP model *NASA N2A Hybrid Wing Body* (author Farhan Malik, file ID 349), obtained via VSP Airshow. Same watertight aeroshape used by the reference paper. Licensed CC0.
+```
+T   = 288.15 K
+a   = √(γRT) = 340.3 m/s
+U   = 0.2 × 340.3 = 68.05 m/s
+μ   = 1.7893e-5 Pa·s        (Sutherland at 288.15 K)
+Re  = 1.225 × 68.05 × 1.5382 / 1.7893e-5 = 7.17e6
+```
 
-> **Note on the reference link.** The paper cites `hangar.openvsp.org/vspfiles/349`. That host now returns HTTP 500 — the OpenVSP model repository has migrated to VSP Airshow. Same model, same author, same file ID.
+That is 8.6% above target. Matching Re = 6.6 × 10⁶ at M = 0.2 and T = 288.15 K requires reduced density:
 
-### Scale check — mandatory before meshing
+```
+ρ = Re·μ / (U·L_ref) = 6.6e6 × 1.7893e-5 / (68.05 × 1.5382) = 1.128 kg/m³
+p = ρRT = 1.128 × 287 × 288.15 ≈ 93.3 kPa
+```
 
-The Hangar listing states the model units are **feet**. The paper's dimensions are metric. A scale factor of 0.3048 is therefore expected, and must be verified rather than assumed: mismatched scale would silently invalidate every non-dimensional coefficient downstream.
+The Langley 14×22 is an atmospheric tunnel, so this discrepancy suggests the reference's stated Re may rest on a different reference length, tunnel temperature, or test velocity. **Resolve before the case files are written** — an unverified inherited freestream value is the same class of error that invalidated Case 1.
 
-| Quantity | Paper value | Model as-downloaded | Verified |
-|---|---|---|---|
-| Wing span | 64.92 m | *pending* | ☐ |
-| Body length | 45.10 m | *pending* | ☐ |
-| Reference area S_ref | 925.2 m² | *pending* | ☐ |
-| Reference length L_ref | 26.52 m | *pending* | ☐ |
-
-### Reference geometry parameters
-
-| Parameter | Value |
-|---|---|
-| Wing span | 64.92 m |
-| Body length | 45.10 m |
-| Reference area S_ref | 925.2 m² |
-| Reference length L_ref | 26.52 m |
-| Moment reference centre | 24.33 m aft of nose (53.94% body length) |
-| Quarter-chord sweep (outboard) | 24.2° |
-| Wing twist at tip | −8.87° (linear variation, washout) |
-| Thickness taper t/c | ~8% |
-| Vertical tail cant | 10°, aft location |
-
-The Hangar model uses 34 wing sections for CAD fidelity, so the STL export is expected to be dense and may need cleanup before meshing.
-
----
-
-## Fluid properties
+### Fluid properties
 
 Air as a perfect gas.
 
@@ -94,22 +141,30 @@ Air as a perfect gas.
 
 ---
 
+## Geometry
+
+Source: OpenVSP model *NASA N2A Hybrid Wing Body* (author Farhan Malik, file ID 349), obtained via VSP Airshow. Same watertight aeroshape used by the reference. Licensed CC0.
+
+> **Note on the reference link.** The paper cites `hangar.openvsp.org/vspfiles/349`, which now returns HTTP 500 — the repository has migrated to VSP Airshow. Same model, same author, same file ID. The `.vsp3` is committed here so the study is self-contained.
+
+The model comprises `Wing_Body` and `Vertical_Tails` only — no nacelles or landing gear — matching the reference's cruise configuration. It uses 34 wing sections for CAD fidelity, so the STL export is dense (5.6 MB, ~19,000 triangles).
+
+STL exported as a **tagged multi-solid** file, giving four named solids (`Wing_Body_S_Surf0/1`, `Vertical_Tails_S_Surf0/1` — port and starboard halves of each). This allows per-region refinement control in `snappyHexMesh` and automatic patch naming.
+
+---
+
 ## Boundary conditions
 
 | Patch | Condition |
 |---|---|
-| Aircraft surface | No-slip, adiabatic wall |
-| Farfield inlet | Pressure farfield |
-| Outlet | Pressure outlet |
-| Symmetry plane | `symmetryPlane` |
+| Aircraft surface | no-slip, adiabatic wall |
+| Farfield inlet | pressure farfield |
+| Outlet | pressure outlet |
+| Symmetry plane | `symmetryPlane` at y = 0 |
 
-Farfield placed at ~50 body lengths upstream and downstream, matching the reference.
+Farfield at ~50 body lengths upstream and downstream, matching the reference.
 
----
-
-## Method
-
-Angle of attack is imposed by **rotating the freestream vector**, not the mesh — one mesh serves both angles:
+Angle of attack is imposed by rotating the freestream vector, not the mesh:
 
 ```
 U∞      = |U| (cos α, sin α, 0)
@@ -117,54 +172,46 @@ dragDir =     (cos α, sin α, 0)
 liftDir =     (−sin α, cos α, 0)
 ```
 
-The same mesh is used for all four runs, so any difference between them is attributable to the turbulence model or the angle, not to discretisation.
-
 ---
 
 ## Post-processing
 
-For each run:
+Per run:
 
-- Integrated coefficients: C_L, C_D, C_m
-- Surface C_p and C_f distributions at spanwise stations (13.4%, 30.5%, 51.0%, 90.6% semi-span, matching the reference)
-- **Mach number field**, to identify local regions exceeding the freestream value of 0.2 — central to the compressibility question, not optional
-- y⁺ distribution on the aircraft surface, to verify the wall-resolved requirement was met
+- Integrated coefficients C_L, C_D, C_m
+- Surface C_p and C_f at 13.4%, 30.5%, 51.0% and 90.6% semi-span, matching the reference
+- **Mach number field**, to identify local regions exceeding the freestream 0.2 — central to the compressibility question
+- y⁺ distribution on the surface, verifying the wall-resolved requirement was met
 - Convergence history of residuals and force coefficients
 
 ---
 
 ## Scope and stated limitations
 
-Stated up front rather than discovered later.
+**Mesh resolution.** The reference used 15–17 M cells (half body) with a convergence study across coarse (~7 M), medium (~14.4 M) and fine (~17 M), reporting <2% change in C_L and <3% in C_D beyond the medium grid. The mesh here is built to satisfy y⁺ < 1 first; the resulting cell count determines the compute route and is reported once known. No grid-independence claim is made unless a convergence study is actually run.
 
-**Mesh resolution.** The reference used 15–17 M cells (half body) with a convergence study spanning coarse (~7 M), medium (~14.4 M) and fine (~17 M), reporting <2% change in C_L and <3% in C_D beyond the medium grid. The mesh here is built to satisfy the y⁺ < 1 requirement first; the resulting cell count determines the compute route and is reported once known. No grid-independence claim is made unless a convergence study is actually run.
+**Cell topology.** The reference used polyhedral cells converted from tet/prism in ICEM-CFD. This study uses `snappyHexMesh` (hex-dominant with prism layers) — different discretisation error characteristics.
 
-**Cell topology.** The reference used polyhedral cells converted from tet/prism in ICEM-CFD. This study uses `snappyHexMesh` (hex-dominant with prism layers). Different discretisation error characteristics.
+**Half-model symmetry.** Valid at zero sideslip. Cannot represent asymmetric flow phenomena, a real consideration at 10° where vortex rollup begins. Side force, rolling and yawing moments are zero by construction and are not reported.
 
-**Half-model symmetry.** Valid at zero sideslip. Cannot represent asymmetric flow phenomena, which is a real consideration at 10° where vortex rollup begins. Side force, rolling and yawing moments are zero by construction and are not reported.
-
-**Configuration mismatch (inherited from the reference).** The reference notes that experimental C_p data are for the *baseline* configuration (with LE droop and nacelles) while the CFD is the *cruise* configuration (without). Discrepancies near the leading edge at the outboard stations are attributable to the droop. This study inherits the same mismatch.
+**Configuration mismatch (inherited from the reference).** The reference notes that experimental C_p data are for the *baseline* configuration (with LE droop and nacelles) while its CFD is the *cruise* configuration (without). Discrepancies near the leading edge at outboard stations are attributable to the droop. This study inherits the same mismatch.
 
 ---
 
 ## Comparison targets
 
-Populated as results arrive. Values read from figures rather than tables are labelled as such, and carry their own extraction error.
+Populated as results arrive. Values read from figures rather than tables are labelled, and carry their own extraction error.
 
 | Source | α | C_L | C_D | C_m |
 |---|---|---|---|---|
-| Experiment (Langley 14×22, T597/T612) | 6° | *pending* | *pending* | *pending* |
 | Reference CFD — FLUENT | 6° | *pending* | *pending* | *pending* |
 | Reference CFD — SU2 | 6° | *pending* | *pending* | *pending* |
 | **This study — SA** | 6° | *pending* | *pending* | *pending* |
 | **This study — SST** | 6° | *pending* | *pending* | *pending* |
-| Experiment | 10° | *pending* | *pending* | *pending* |
 | Reference CFD — FLUENT | 10° | *pending* | *pending* | *pending* |
 | Reference CFD — SU2 | 10° | *pending* | *pending* | *pending* |
 | **This study — SA** | 10° | *pending* | *pending* | *pending* |
 | **This study — SST** | 10° | *pending* | *pending* | *pending* |
-
-Note that the reference CFD and the experimental data do not agree with each other. Both are reported rather than one being selected as *the* target.
 
 ---
 
@@ -178,7 +225,7 @@ Note that the reference CFD and the experimental data do not agree with each oth
 | OpenFOAM | v2512 (ESI) |
 | Geometry | OpenVSP 3.51.2 |
 
-Mesh generation is being done locally. Solve compute is to be determined once the mesh size is known.
+Mesh generation local. Solve compute to be determined once mesh size is known.
 
 ---
 
@@ -188,17 +235,16 @@ Mesh generation is being done locally. Solve compute is to be determined once th
 |---|---|---|
 | 2026-08-12 | OpenVSP 3.51.2 installed on Fedora | done |
 | 2026-08-12 | Geometry obtained (VSP Airshow, file 349) | done |
-| — | Scale verification against reference dimensions | pending |
-| — | STL export and surface cleanup | pending |
+| 2026-08-13 | Full-scale verification against reference dimensions | done |
+| 2026-08-13 | Tagged multi-solid STL export | done |
+| 2026-08-13 | Scaled to 5.8% wind tunnel model, watertight verified | done |
+| — | Freestream state resolved (see open question above) | pending |
 | — | Reference value extraction from paper | pending |
 | — | Domain sizing and background mesh | pending |
 | — | `snappyHexMesh` generation | pending |
-| — | Mesh quality check and y⁺ estimate | pending |
+| — | Mesh quality check and y⁺ verification | pending |
 | — | Case setup: `rhoSimpleFoam`, thermophysical properties | pending |
-| — | Run 1: α = 6°, SA | pending |
-| — | Run 2: α = 6°, SST | pending |
-| — | Run 3: α = 10°, SA | pending |
-| — | Run 4: α = 10°, SST | pending |
+| — | Runs 1–4 | pending |
 | — | Post-processing and comparison | pending |
 
 ---
@@ -208,19 +254,20 @@ Mesh generation is being done locally. Solve compute is to be determined once th
 ```
 n2a-validation/
 ├── README.md
-├── geometry/            OpenVSP source, STL export, scale-check notes
-├── reference_data/      Values extracted from the papers, with provenance
-├── mesh/                snappyHexMesh dictionaries, quality reports
-├── case_alpha6_SA/
-├── case_alpha6_SST/
-├── case_alpha10_SA/
-├── case_alpha10_SST/
-├── tools/               Post-processing and plotting scripts
-├── figures/             Mesh views, flow fields, comparison plots
-└── notes/               Running log of decisions and problems
+├── geometry/
+│   ├── nasan2ahybridwingbody.vsp3    OpenVSP source (feet, full scale)
+│   ├── n2a_feet.stl                  tagged multi-solid export, unscaled
+│   └── n2a_wt.stl                    scaled to 5.8% WT model, metres
+├── reference_data/
+├── mesh/
+├── case_alpha6_SA/  case_alpha6_SST/
+├── case_alpha10_SA/ case_alpha10_SST/
+├── tools/
+├── figures/
+└── notes/
 ```
 
-Meshes and time directories are not committed (size). Dictionaries, scripts and the geometry are, so the mesh is regenerable.
+Meshes and time directories are not committed (size). Dictionaries, scripts and geometry are, so the mesh is regenerable.
 
 ---
 
