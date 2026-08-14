@@ -140,12 +140,12 @@ addLayersControls
     {
         "(wing_body|vertical_tails).*"
         {
-            nSurfaceLayers 20;
+            nSurfaceLayers 33;
         }
     }
 
     firstLayerThickness 1.25e-5;      // y+ ~ 1
-    expansionRatio      1.25;
+    expansionRatio      1.2;
     minThickness        1.25e-6;      // 10% of first layer
 
     nGrow               0;            // 1 collapses coverage on this geometry
@@ -156,7 +156,7 @@ addLayersControls
     nSmoothSurfaceNormals 1;
     nSmoothNormals      3;
     nSmoothThickness    10;
-    maxFaceThicknessRatio 2.0;
+    maxFaceThicknessRatio 0.5;
     maxThicknessToMedialRatio 0.6;
     minMedialAxisAngle  130;
     nBufferCellsNoExtrude 0;

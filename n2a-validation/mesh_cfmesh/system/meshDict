@@ -1,0 +1,149 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| N2A Hybrid Wing-Body - cfMesh (cartesianMesh)                                |
+|                                                                              |
+| cfMesh differs from snappyHexMesh in how layers are made: it builds the       |
+| boundary layer as part of mesh construction rather than inserting prisms      |
+| afterwards by shrinking the volume mesh. The "extrusion rejected at N faces"  |
+| failure mode does not arise in the same way.                                  |
+|                                                                              |
+| maxCellSize is an absolute length in metres, not a refinement level.          |
+|                                                                              |
+| Target: first layer 12.5 micron for y+ ~ 1 at Re = 6.6e6.                     |
+| thicknessRatio 1.25 with 20 layers gives a 4.3 mm stack.                      |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version   2.0;
+    format    ascii;
+    class     dictionary;
+    object    meshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+surfaceFile "n2a_wt.fms";
+
+// Background cell size, metres
+maxCellSize     2.0;
+
+// Cell size at the aircraft surface
+boundaryCellSize        0.0078;
+boundaryCellSizeRefinementThickness 0.05;
+
+// Minimum permitted cell size - stops runaway refinement
+minCellSize     0.0039;
+
+// ---------------------------------------------------------------------------
+// Local refinement per patch
+// ---------------------------------------------------------------------------
+localRefinement
+{
+    "wingBody.*"
+    {
+        cellSize 0.0078;
+        refinementThickness 0.05;
+    }
+    "tail.*"
+    {
+        cellSize 0.0039;
+        refinementThickness 0.03;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Volume refinement zones
+// ---------------------------------------------------------------------------
+objectRefinements
+{
+    nearField
+    {
+        type        box;
+        cellSize    0.0625;
+        centre      (1.3 0.9 0.05);
+        lengthX     6.0;
+        lengthY     3.2;
+        lengthZ     2.4;
+    }
+
+    wake
+    {
+        type        box;
+        cellSize    0.125;
+        centre      (7.0 1.1 0.0);
+        lengthX     11.0;
+        lengthY     2.8;
+        lengthZ     1.8;
+    }
+
+    outer
+    {
+        type        box;
+        cellSize    0.5;
+        centre      (7.0 2.5 0.0);
+        lengthX     28.0;
+        lengthY     7.0;
+        lengthZ     9.0;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Boundary layers
+// ---------------------------------------------------------------------------
+boundaryLayers
+{
+    // Global fallback
+    nLayers             20;
+    thicknessRatio      1.25;
+    maxFirstLayerThickness 1.25e-5;
+
+    patchBoundaryLayers
+    {
+        "wingBody.*"
+        {
+            nLayers             20;
+            thicknessRatio      1.25;
+            maxFirstLayerThickness 1.25e-5;
+            allowDiscontinuity  0;
+        }
+        "tail.*"
+        {
+            nLayers             15;
+            thicknessRatio      1.25;
+            maxFirstLayerThickness 1.25e-5;
+            allowDiscontinuity  1;
+        }
+    }
+
+    // Redistribute layer thickness to improve quality
+    optimiseLayer   1;
+
+    optimisationParameters
+    {
+        nSmoothNormals      5;
+        maxNumIterations    10;
+        featureSizeFactor   0.3;
+        reCalculateNormals  1;
+        relThicknessTol     0.1;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Feature angle for edge detection
+// ---------------------------------------------------------------------------
+surfaceMeshRefinement
+{
+}
+
+renameBoundary
+{
+    defaultName     farfield;
+    defaultType     patch;
+
+    newPatchNames
+    {
+        "wingBody.*"       { newName aircraft; type wall; }
+        "tail.*"  { newName aircraft; type wall; }
+    }
+}
+
+// ************************************************************************* //

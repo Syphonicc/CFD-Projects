@@ -82,22 +82,22 @@ castellatedMeshControls
 
     features
     (
-        { file "n2a_wt.eMesh"; level 9; }
+        { file "n2a_wt.eMesh"; level 8; }
     );
 
     refinementSurfaces
     {
         n2a
         {
-            level (8 9);
+            level (7 8);
             patchInfo { type wall; }
 
             regions
             {
-                wing_body_0      { level (8 9); patchInfo { type wall; } }
-                wing_body_1      { level (8 9); patchInfo { type wall; } }
-                vertical_tails_0 { level (9 10); patchInfo { type wall; } }
-                vertical_tails_1 { level (9 10); patchInfo { type wall; } }
+                wing_body_0      { level (7 8); patchInfo { type wall; } }
+                wing_body_1      { level (7 8); patchInfo { type wall; } }
+                vertical_tails_0 { level (8 9); patchInfo { type wall; } }
+                vertical_tails_1 { level (8 9); patchInfo { type wall; } }
             }
         }
     }
@@ -106,8 +106,8 @@ castellatedMeshControls
 
     refinementRegions
     {
-        refineNear  { mode inside; levels ((1E15 7)); }
-        refineWake  { mode inside; levels ((1E15 6)); }
+        refineNear  { mode inside; levels ((1E15 6)); }
+        refineWake  { mode inside; levels ((1E15 5)); }
         refineOuter { mode inside; levels ((1E15 3)); }
     }
 
@@ -140,12 +140,12 @@ addLayersControls
     {
         "(wing_body|vertical_tails).*"
         {
-            nSurfaceLayers 20;
+            nSurfaceLayers 33;
         }
     }
 
     firstLayerThickness 1.25e-5;      // y+ ~ 1
-    expansionRatio      1.25;
+    expansionRatio      1.2;
     minThickness        1.25e-6;      // 10% of first layer
 
     nGrow               0;            // 1 collapses coverage on this geometry
@@ -156,7 +156,7 @@ addLayersControls
     nSmoothSurfaceNormals 1;
     nSmoothNormals      3;
     nSmoothThickness    10;
-    maxFaceThicknessRatio 2.0;
+    maxFaceThicknessRatio 0.5;
     maxThicknessToMedialRatio 0.6;
     minMedialAxisAngle  130;
     nBufferCellsNoExtrude 0;

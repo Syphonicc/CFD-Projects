@@ -46,3 +46,7 @@ __pycache__/
 **/constant/extendedFeatureEdgeMesh/
 **/constant/triSurface/*.eMesh
 **/constant/triSurface/*.stl
+**/constant/triSurface/*.fms
+**/constant/triSurface/*.obj
+**/constant/triSurface/*.vtp
+**/cell_*.obj

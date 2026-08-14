@@ -72,7 +72,7 @@ boundary
 
     symmetry
     {
-        type symmetryPlane;
+        type symmetry;
         faces ( (0 1 5 4) );          // y = 0
     }
 
