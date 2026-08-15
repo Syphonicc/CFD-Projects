@@ -71,22 +71,22 @@ geometry
 // ---------------------------------------------------------------------------
 castellatedMeshControls
 {
-    maxLocalCells       20000000;
-    maxGlobalCells      40000000;
+    maxLocalCells       4000000;
+    maxGlobalCells      10000000;
     minRefinementCells  10;
     maxLoadUnbalance    0.10;
     nCellsBetweenLevels 3;
 
     features
     (
-        { file "n2a_wt.eMesh"; level 10; }
+        { file "n2a_wt.eMesh"; level 8; }
     );
 
     refinementSurfaces
     {
         n2a
         {
-            level (9 10);
+            level (7 8);
             patchInfo { type wall; }
 
         }
@@ -166,8 +166,8 @@ addLayersControls
 meshQualityControls
 {
     maxNonOrtho         75;
-    maxBoundarySkewness 4;
-    maxInternalSkewness 3;
+    maxBoundarySkewness 25;
+    maxInternalSkewness 6;
     maxConcave          85;
     minVol              1e-20;
     minTetQuality       -1e30;

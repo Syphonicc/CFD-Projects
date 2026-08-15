@@ -96,8 +96,8 @@ castellatedMeshControls
 
     refinementRegions
     {
-        refineNear  { mode inside; levels ((1E15 6)); }
-        refineWake  { mode inside; levels ((1E15 5)); }
+        refineNear  { mode inside; levels ((1E15 8)); }
+        refineWake  { mode inside; levels ((1E15 7)); }
         refineOuter { mode inside; levels ((1E15 3)); }
     }
 
@@ -166,8 +166,8 @@ addLayersControls
 meshQualityControls
 {
     maxNonOrtho         75;
-    maxBoundarySkewness 4;
-    maxInternalSkewness 3;
+    maxBoundarySkewness 25;
+    maxInternalSkewness 6;
     maxConcave          85;
     minVol              1e-20;
     minTetQuality       -1e30;

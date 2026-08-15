@@ -49,3 +49,4 @@ __pycache__/
 **/constant/triSurface/*.obj
 **/constant/triSurface/*.vtp
 **/cell_*.obj
+**/constant/polyMesh.*/
