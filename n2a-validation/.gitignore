@@ -24,7 +24,6 @@ VTK/
 *.OpenFOAM
 
 # Large geometry intermediates
-*.stl.gz
 geometry/*_raw.stl
 
 # OS / editor

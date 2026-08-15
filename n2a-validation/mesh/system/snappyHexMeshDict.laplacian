@@ -129,13 +129,13 @@ addLayersControls
     {
         "n2a.*"
         {
-            nSurfaceLayers 25;
+            nSurfaceLayers 10;
         }
     }
 
-    firstLayerThickness 1.25e-5;
+    firstLayerThickness 5.0e-4;     // y+ ~ 40
     expansionRatio      1.2;
-    minThickness        1.25e-6;     // 10% of first layer
+    minThickness        5.0e-5;     // 10% of first layer
 
     // Alternate mesh shrinker: displacement motion solver instead of
     // the default medial axis algorithm (ESI OpenFOAM only)
@@ -165,17 +165,17 @@ addLayersControls
 // ---------------------------------------------------------------------------
 meshQualityControls
 {
-    maxNonOrtho         75;
-    maxBoundarySkewness 25;
-    maxInternalSkewness 6;
-    maxConcave          85;
-    minVol              1e-20;
-    minTetQuality       -1e30;
+    maxNonOrtho         65;
+    maxBoundarySkewness 20;
+    maxInternalSkewness 4;
+    maxConcave          80;
+    minVol              1e-14;
+    minTetQuality       1e-18;
     minArea             -1;
-    minTwist            0.001;
-    minDeterminant      1e-6;
-    minFaceWeight       0.002;
-    minVolRatio         0.001;
+    minTwist            0.02;
+    minDeterminant      0.001;
+    minFaceWeight       0.02;
+    minVolRatio         0.01;
     minTriangleTwist    -1;
 
     nSmoothScale        4;
@@ -183,11 +183,7 @@ meshQualityControls
 
     relaxed
     {
-        maxNonOrtho     85;
-        minTwist        -1;
-        minDeterminant  1e-9;
-        minFaceWeight   1e-4;
-        minVolRatio     1e-4;
+        maxNonOrtho     75;
     }
 }
 

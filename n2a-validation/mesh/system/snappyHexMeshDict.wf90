@@ -129,13 +129,13 @@ addLayersControls
     {
         "n2a.*"
         {
-            nSurfaceLayers 25;
+            nSurfaceLayers 10;
         }
     }
 
-    firstLayerThickness 1.25e-5;
+    firstLayerThickness 5.0e-4;     // y+ ~ 40
     expansionRatio      1.2;
-    minThickness        1.25e-6;     // 10% of first layer
+    minThickness        5.0e-5;     // 10% of first layer
 
     // Alternate mesh shrinker: displacement motion solver instead of
     // the default medial axis algorithm (ESI OpenFOAM only)
