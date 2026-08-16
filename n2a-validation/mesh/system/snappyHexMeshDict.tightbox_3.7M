@@ -44,65 +44,51 @@ geometry
     {
         type triSurfaceMesh;
         name n2a;
-        regions
-        {
-            "1_Wing_Body_S_Surf0"      { name wing_body_0;      }
-            "2_Wing_Body_S_Surf1"      { name wing_body_1;      }
-            "3_Vertical_Tails_S_Surf0" { name vertical_tails_0; }
-            "4_Vertical_Tails_S_Surf1" { name vertical_tails_1; }
-        }
     }
 
     refineNear
     {
         type searchableBox;
-        min (-1.0 -0.2 -1.0);
-        max ( 4.5  2.6  1.2);
+        min (-0.15 -0.05 -0.35);
+        max ( 3.10  2.00  0.55);
     }
 
     refineWake
     {
         type searchableBox;
-        min ( 2.0 -0.2 -0.8);
-        max (12.0  2.4  0.8);
+        min ( 2.40 -0.05 -0.30);
+        max ( 7.00  2.00  0.45);
     }
 
     refineOuter
     {
         type searchableBox;
-        min (-6.0 -0.5 -4.0);
-        max (20.0  6.0  4.0);
+        min (-1.50 -0.10 -1.50);
+        max (12.00  4.00  1.80);
     }
 }
 
 // ---------------------------------------------------------------------------
 castellatedMeshControls
 {
-    maxLocalCells       4000000;
-    maxGlobalCells      10000000;
+    maxLocalCells       20000000;
+    maxGlobalCells      60000000;
     minRefinementCells  10;
     maxLoadUnbalance    0.10;
     nCellsBetweenLevels 3;
 
     features
     (
-        { file "n2a_wt.eMesh"; level 8; }
+        { file "n2a_wt.eMesh"; level 10; }
     );
 
     refinementSurfaces
     {
         n2a
         {
-            level (7 8);
+            level (9 10);
             patchInfo { type wall; }
 
-            regions
-            {
-                wing_body_0      { level (7 8); patchInfo { type wall; } }
-                wing_body_1      { level (7 8); patchInfo { type wall; } }
-                vertical_tails_0 { level (8 9); patchInfo { type wall; } }
-                vertical_tails_1 { level (8 9); patchInfo { type wall; } }
-            }
         }
     }
 
@@ -110,9 +96,9 @@ castellatedMeshControls
 
     refinementRegions
     {
-        refineNear  { mode inside; levels ((1E15 6)); }
-        refineWake  { mode inside; levels ((1E15 5)); }
-        refineOuter { mode inside; levels ((1E15 3)); }
+        refineNear  { mode inside; levels ((1E15 8)); }
+        refineWake  { mode inside; levels ((1E15 7)); }
+        refineOuter { mode inside; levels ((1E15 5)); }
     }
 
     locationInMesh (-20.137 15.211 8.309);
@@ -141,15 +127,24 @@ addLayersControls
 
     layers
     {
-        "(wing_body|vertical_tails).*"
+        "n2a.*"
         {
-            nSurfaceLayers 10;
+            nSurfaceLayers 25;
         }
     }
 
-    firstLayerThickness 5.0e-4;     // y+ ~ 40
+    firstLayerThickness 1.25e-5;
     expansionRatio      1.2;
-    minThickness        5.0e-5;     // 10% of first layer
+    minThickness        1.25e-6;     // 10% of first layer
+
+    // Alternate mesh shrinker: displacement motion solver instead of
+    // the default medial axis algorithm (ESI OpenFOAM only)
+    meshShrinker    displacementMotionSolver;
+    solver          displacementLaplacian;
+    displacementLaplacianCoeffs
+    {
+        diffusivity     quadratic inverseDistance 1(n2a);
+    }
 
     nGrow               0;
 
@@ -170,17 +165,17 @@ addLayersControls
 // ---------------------------------------------------------------------------
 meshQualityControls
 {
-    maxNonOrtho         65;
-    maxBoundarySkewness 20;
-    maxInternalSkewness 4;
-    maxConcave          80;
-    minVol              1e-14;
-    minTetQuality       1e-18;
+    maxNonOrtho         75;
+    maxBoundarySkewness 4;
+    maxInternalSkewness 3;
+    maxConcave          85;
+    minVol              1e-20;
+    minTetQuality       -1e30;
     minArea             -1;
-    minTwist            0.02;
-    minDeterminant      0.001;
-    minFaceWeight       0.02;
-    minVolRatio         0.01;
+    minTwist            0.001;
+    minDeterminant      1e-6;
+    minFaceWeight       0.002;
+    minVolRatio         0.001;
     minTriangleTwist    -1;
 
     nSmoothScale        4;
@@ -188,7 +183,11 @@ meshQualityControls
 
     relaxed
     {
-        maxNonOrtho     75;
+        maxNonOrtho     85;
+        minTwist        -1;
+        minDeterminant  1e-9;
+        minFaceWeight   1e-4;
+        minVolRatio     1e-4;
     }
 }
 

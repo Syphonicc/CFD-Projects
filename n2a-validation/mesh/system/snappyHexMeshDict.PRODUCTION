@@ -49,44 +49,44 @@ geometry
     refineNear
     {
         type searchableBox;
-        min (-1.0 -0.2 -1.0);
-        max ( 4.5  2.6  1.2);
+        min (-0.20 -0.05 -0.60);
+        max ( 3.60  2.10  1.10);
     }
 
     refineWake
     {
         type searchableBox;
-        min ( 2.0 -0.2 -0.8);
-        max (12.0  2.4  0.8);
+        min ( 2.40 -0.05 -0.55);
+        max ( 8.00  2.10  0.95);
     }
 
     refineOuter
     {
         type searchableBox;
-        min (-6.0 -0.5 -4.0);
-        max (20.0  6.0  4.0);
+        min (-1.50 -0.10 -1.50);
+        max (12.00  4.00  1.80);
     }
 }
 
 // ---------------------------------------------------------------------------
 castellatedMeshControls
 {
-    maxLocalCells       4000000;
-    maxGlobalCells      10000000;
+    maxLocalCells       20000000;
+    maxGlobalCells      60000000;
     minRefinementCells  10;
     maxLoadUnbalance    0.10;
     nCellsBetweenLevels 3;
 
     features
     (
-        { file "n2a_wt.eMesh"; level 8; }
+        { file "n2a_wt.eMesh"; level 10; }
     );
 
     refinementSurfaces
     {
         n2a
         {
-            level (7 8);
+            level (9 10);
             patchInfo { type wall; }
 
         }
@@ -96,9 +96,9 @@ castellatedMeshControls
 
     refinementRegions
     {
-        refineNear  { mode inside; levels ((1E15 6)); }
-        refineWake  { mode inside; levels ((1E15 5)); }
-        refineOuter { mode inside; levels ((1E15 3)); }
+        refineNear  { mode inside; levels ((1E15 8)); }
+        refineWake  { mode inside; levels ((1E15 7)); }
+        refineOuter { mode inside; levels ((1E15 5)); }
     }
 
     locationInMesh (-20.137 15.211 8.309);
@@ -166,8 +166,8 @@ addLayersControls
 meshQualityControls
 {
     maxNonOrtho         75;
-    maxBoundarySkewness 25;
-    maxInternalSkewness 6;
+    maxBoundarySkewness 2.5;
+    maxInternalSkewness 2.5;
     maxConcave          85;
     minVol              1e-20;
     minTetQuality       -1e30;
