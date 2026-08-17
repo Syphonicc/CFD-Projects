@@ -1,0 +1,49 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| N2A Hybrid Wing-Body - compressible RANS, rhoSimpleFoam                      |
+| M = 0.2, Re = 6.60e6, L_ref = 1.53816 m, 5.8% wind tunnel scale              |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      k;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -2 0 0 0 0];
+
+// TMR convention: k_inf = 9e-9 * a_inf^2
+internalField   uniform 1.042010e-03;
+
+boundaryField
+{
+    inlet
+    {
+        type            freestream;
+        freestreamValue uniform 1.042010e-03;
+    }
+    outlet
+    {
+        type            freestream;
+        freestreamValue uniform 1.042010e-03;
+    }
+    farfield
+    {
+        type            freestream;
+        freestreamValue uniform 1.042010e-03;
+    }
+    symmetry
+    {
+        type            symmetry;
+    }
+    n2a
+    {
+        type            kLowReWallFunction;
+        value           uniform 1e-12;
+    }
+}
+
+// ************************************************************************* //

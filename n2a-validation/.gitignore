@@ -50,3 +50,11 @@ __pycache__/
 **/constant/triSurface/*.vtp
 **/cell_*.obj
 **/constant/polyMesh.*/
+
+# Case run artifacts
+case_*/constant/polyMesh
+case_*/postProcessing/
+case_*/processor*/
+case_*/log.*
+*.bak
+*.bak2

@@ -1,0 +1,24 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| N2A Hybrid Wing-Body - compressible RANS, rhoSimpleFoam                      |
+| M = 0.2, Re = 6.60e6, L_ref = 1.53816 m, 5.8% wind tunnel scale              |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      turbulenceProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+simulationType  RAS;
+
+RAS
+{
+    RASModel        SpalartAllmaras;
+    turbulence      on;
+    printCoeffs     on;
+}
+
+// ************************************************************************* //

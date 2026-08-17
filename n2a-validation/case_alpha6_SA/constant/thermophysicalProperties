@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| N2A Hybrid Wing-Body - compressible RANS, rhoSimpleFoam                      |
+| M = 0.2, Re = 6.60e6, L_ref = 1.53816 m, 5.8% wind tunnel scale              |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+thermoType
+{
+    type            hePsiThermo;
+    mixture         pureMixture;
+    transport       sutherland;
+    thermo          hConst;
+    equationOfState perfectGas;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+
+mixture
+{
+    specie
+    {
+        molWeight   28.96;          // R = 287.1 J/kgK
+    }
+    thermodynamics
+    {
+        Cp          1006;           // paper value
+        Hf          0;
+    }
+    transport
+    {
+        // Sutherland  mu = As*T^1.5/(T + Ts)
+        // at T = 288.15 K gives mu = 1.78938e-5 Pa.s
+        As          1.458e-06;
+        Ts          110.4;
+    }
+}
+
+// ************************************************************************* //

@@ -1,0 +1,35 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| N2A Hybrid Wing-Body - compressible RANS, rhoSimpleFoam                      |
+| M = 0.2, Re = 6.60e6, L_ref = 1.53816 m, 5.8% wind tunnel scale              |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      nut;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -1 0 0 0 0];
+
+internalField   uniform 3.337800e-06;
+
+boundaryField
+{
+    inlet       { type calculated; value uniform 3.337800e-06; }
+    outlet      { type calculated; value uniform 3.337800e-06; }
+    farfield    { type calculated; value uniform 3.337800e-06; }
+    symmetry    { type symmetry; }
+    n2a
+    {
+        // y+ < 1 on this mesh. Spalding is valid across all y+ so it
+        // degrades gracefully on the 1.55% of faces without prism layers.
+        type            nutUSpaldingWallFunction;
+        value           uniform 0;
+    }
+}
+
+// ************************************************************************* //

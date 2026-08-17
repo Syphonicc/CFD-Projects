@@ -1,0 +1,96 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| N2A Hybrid Wing-Body - compressible RANS, rhoSimpleFoam                      |
+| M = 0.2, Re = 6.60e6, L_ref = 1.53816 m, 5.8% wind tunnel scale              |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     rhoSimpleFoam;
+
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         2000;
+deltaT          1;
+
+writeControl    timeStep;
+writeInterval   2000;
+purgeWrite      2;
+writeFormat     binary;
+writePrecision  8;
+writeCompression on;
+timeFormat      general;
+timePrecision   6;
+runTimeModifiable yes;
+
+functions
+{
+    forceCoeffs1
+    {
+        type            forceCoeffs;
+        libs            (forces);
+        writeControl    timeStep;
+        writeInterval   1;
+        patches         (n2a);
+
+        // Compressible: rho is read from the solved field, not supplied
+        rho             rho;
+        rhoInf          1.1281;
+        pRef            93290;
+
+        // Wind frame at alpha = 6.0 deg
+        liftDir         (-0.104528 0 0.994522);
+        dragDir         (0.994522 0 0.104528);
+        pitchAxis       (0 1 0);
+        CofR            (1.41510 0 0);
+
+        magUInf         68.05;
+        lRef            1.53816;
+
+        // HALF of full S_ref (3.11237). Half model gives half the force, so
+        // half the area returns full-model coefficients directly.
+        Aref            1.55619;
+    }
+
+    yPlus1
+    {
+        type            yPlus;
+        libs            (fieldFunctionObjects);
+        writeControl    writeTime;
+        patches         (n2a);
+    }
+
+    MachNo1
+    {
+        type            MachNo;
+        libs            (fieldFunctionObjects);
+        writeControl    writeTime;
+    }
+
+    wallShearStress1
+    {
+        type            wallShearStress;
+        libs            (fieldFunctionObjects);
+        writeControl    writeTime;
+        patches         (n2a);
+    }
+
+    residuals1
+    {
+        type            solverInfo;
+        libs            (utilityFunctionObjects);
+        writeControl    timeStep;
+        writeInterval   1;
+        fields          (".*");
+    }
+}
+
+// ************************************************************************* //
