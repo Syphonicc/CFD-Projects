@@ -1,0 +1,3 @@
+# Solver information
+# Time          	U_solver        	Ux_initial      	Ux_final        	Ux_iters        	Uy_initial      	Uy_final        	Uy_iters        	Uz_initial      	Uz_final        	Uz_iters        	U_converged     	h_solver        	h_initial       	h_final         	h_iters         	h_converged     	nuTilda_solver  	nuTilda_initial 	nuTilda_final   	nuTilda_iters   	nuTilda_converged	p_solver        	p_initial       	p_final         	p_iters         	p_converged     
+155             	DILUPBiCGStab	2.41221160e-07	9.10686020e-09	1	5.39033840e-06	2.08966190e-07	1	9.02592670e-07	3.13791690e-08	1	false	DILUPBiCGStab	9.85509660e-06	1.73295030e-07	1	true	DILUPBiCGStab	7.30838840e-08	2.91127030e-10	1	true	GAMG	9.69597380e-06	3.61153950e-07	1	true

@@ -22,7 +22,7 @@ endTime         2000;
 deltaT          1;
 
 writeControl    timeStep;
-writeInterval   2000;
+writeInterval   200;
 purgeWrite      2;
 writeFormat     binary;
 writePrecision  8;
