@@ -58,3 +58,10 @@ case_*/processor*/
 case_*/log.*
 *.bak
 *.bak2
+
+# Solution fields and raw samples (large, regenerable from cases + mesh)
+results/*/OPENFOAM-solution/[0-9]*/
+results/*/OPENFOAM-solution/constant/
+results/*/OPENFOAM-solution/system/
+results/*/*.tar.gz
+analysis/*/*.raw

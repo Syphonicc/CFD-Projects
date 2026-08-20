@@ -586,7 +586,7 @@ relaxationFactors
 """ + END
 
 
-DECOMPOSE = foamfile("dictionary", "decomposeParDict", "system") + """numberOfSubdomains 8;
+DECOMPOSE = foamfile("dictionary", "decomposeParDict", "system") + """numberOfSubdomains 32;
 
 method          scotch;
 """ + END
