@@ -338,8 +338,8 @@ boundaryField
     }}
     n2a
     {{
-        type            kLowReWallFunction;
-        value           uniform 1e-12;
+        type            kqRWallFunction;
+        value           uniform {K_INF:.6e};
     }}
 }}
 """ + END

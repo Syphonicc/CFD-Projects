@@ -49,13 +49,6 @@ SIMPLE
     pMinFactor      0.1;
     pMaxFactor      4.0;
 
-    residualControl
-    {
-        p               1e-5;
-        U               1e-5;
-        h               1e-5;
-        "(k|omega)" 1e-5;
-    }
 }
 
 relaxationFactors
